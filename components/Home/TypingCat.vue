@@ -102,10 +102,10 @@ const startDeletingAnimation = () => {
 
   animationIntervalDeleting = setInterval(() => {
     // Toggle classes
-    leftPaw.value.classList.toggle("left-paw");
-    paws.value.classList.toggle("paws");
-    circles.value.classList.toggle("circles");
-    leftPaw.value.classList.toggle("left-paw-typing");
+    leftPaw.value?.classList.toggle("left-paw");
+    paws.value?.classList.toggle("paws");
+    circles.value?.classList.toggle("circles");
+    leftPaw.value?.classList.toggle("left-paw-typing");
 
     // Stop after a few toggles (if not in continuous mode)
     if (!typingState.value.isDeleting) {

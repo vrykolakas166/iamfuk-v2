@@ -1,5 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col transition-colors duration-500">
+    <Toast style="z-index: 999" />
+
     <!-- Animated Background -->
     <div class="fixed inset-0 z-0">
       <div class="floating-dots"></div>
@@ -9,7 +11,8 @@
     <header
       class="sticky md:mx-auto md:w-[80vw] md:top-3 md:rounded-lg z-50 backdrop-blur-md"
       :class="{
-        'shadow-md dark:bg-zinc-900/50 dark:shadow-zinc-800/30': !mobileMenuOpen,
+        'shadow-md dark:bg-zinc-900/50 dark:shadow-zinc-800/30':
+          !mobileMenuOpen,
       }"
     >
       <div class="max-w-7xl md:max-w-[80vw] mx-auto px-4 py-4">
@@ -53,16 +56,22 @@
           <!-- Navigation -->
           <nav
             :class="{
-              'hidden': !mobileMenuOpen,
-              'bg-white dark:bg-neutral-800': mobileMenuOpen
+              hidden: !mobileMenuOpen,
+              'bg-white dark:bg-neutral-800': mobileMenuOpen,
             }"
             class="fixed top-[68px] md:shadow-none shadow-lg md:static inset-x-0 p-4 md:p-0 backdrop-blur-md md:backdrop-blur-none md:block"
           >
             <ul
               class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-8"
+              :class="{ 'items-center': !mobileMenuOpen }"
             >
               <li
-                v-for="(item, index) in ['Projects', 'Games', 'About', 'Access']"
+                v-for="(item, index) in [
+                  'Projects',
+                  'About',
+                  'Playground',
+                  'Ultilities',
+                ]"
                 :key="index"
               >
                 <NuxtLink
@@ -72,6 +81,28 @@
                 >
                   {{ item }}
                 </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink
+                  to="/access"
+                  v-if="isAuthenticated"
+                  class="flex items-center gap-1 w-[100px] dark:hover:text-amber-400 hover:text-amber-500 transition-colors duration-300"
+                  :title="user.displayName || user.email"
+                >
+                  <Icon name="fa:user" size="30" />
+                  <span class="overflow-hidden text-ellipsis">{{
+                    user.displayName || user.email
+                  }}</span>
+                </NuxtLink>
+                <Button v-else>
+                  <NuxtLink
+                    to="/access"
+                    class="nav-link relative block dark:hover:text-amber-400 hover:text-amber-500 transition-colors duration-300"
+                    @click="mobileMenuOpen = false"
+                  >
+                    Access
+                  </NuxtLink>
+                </Button>
               </li>
             </ul>
           </nav>
@@ -165,6 +196,9 @@ import { ref, onMounted } from "vue";
 const mobileMenuOpen = ref(false);
 const mode = ref("light");
 
+const user = ref(null);
+const isAuthenticated = ref(false);
+
 function applyTheme(theme) {
   // Tailwind's dark mode
   if (theme === "dark") {
@@ -183,16 +217,23 @@ function toggleDarkMode() {
   applyTheme(newTheme);
 }
 
-onMounted(() => {
+onMounted(async () => {
   const savedTheme = localStorage.getItem("theme");
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
 
   applyTheme(initialTheme);
+  getAuthentication();
 });
 
+const getAuthentication = async () => {
+  const data = await $fetch("/api/auth/me");
+  user.value = data.user;
+  isAuthenticated.value = data.isAuthenticated;
+};
+
 // Close mobile menu when window is resized to desktop view
-if (process.client) {
+if (import.meta.client) {
   window.addEventListener("resize", () => {
     if (window.innerWidth >= 768) {
       mobileMenuOpen.value = false;

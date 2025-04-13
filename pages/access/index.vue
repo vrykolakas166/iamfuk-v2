@@ -16,14 +16,30 @@
         >
           <h1 class="font-semibold my-2">Create Account</h1>
           <div class="flex gap-4">
-            <Icon class="provider-log" name="logos:facebook" size="30" />
+            <Icon
+              @click="signInByProvider('discord')"
+              class="provider-log"
+              name="logos:microsoft-icon"
+              size="30"
+            />
+            <Icon
+              @click="signInByProvider('discord')"
+              class="provider-log"
+              name="devicon:google"
+              size="30"
+            />
+            <Icon
+              @click="signInByProvider('discord')"
+              class="provider-log"
+              name="logos:facebook"
+              size="30"
+            />
             <Icon
               @click="signInByProvider('discord')"
               class="provider-log"
               name="skill-icons:discord"
               size="30"
             />
-            <Icon class="provider-log" name="devicon:google" size="30" />
           </div>
           <div class="flex items-center justify-center gap-2">
             <hr class="w-20" />
@@ -35,7 +51,7 @@
               id="email1"
               v-model="email"
               placeholder="Email"
-              :invalid="false"
+              :invalid="errEmail !== ''"
             />
             <span v-if="errEmail" class="text-[12px] text-red-500">{{
               errEmail
@@ -44,19 +60,29 @@
               id="password1"
               v-model="password"
               placeholder="Password"
-              :invalid="false"
+              toggleMask
+              :invalid="errPassword !== ''"
             />
+            <span v-if="errPassword" class="text-[12px] text-red-500">{{
+              errPassword
+            }}</span>
             <Password
               id="repassword1"
               v-model="re_password"
               placeholder="Re-Password"
-              :invalid="false"
+              toggleMask
+              :feedback="false"
+              :invalid="errRePassword !== ''"
             />
             <span v-if="errRePassword" class="text-[12px] text-red-500">{{
               errRePassword
             }}</span>
           </div>
-          <Button type="submit" class="w-[100px] mt-2">
+          <Button
+            type="submit"
+            class="w-[100px] mt-2"
+            :disabled="!isValidSignUp()"
+          >
             <span v-if="opts.loading === false">Sign Up</span>
             <Icon v-else name="eos-icons:three-dots-loading" size="30" />
           </Button>
@@ -84,14 +110,30 @@
         >
           <h1 class="font-semibold my-2">Sign in</h1>
           <div class="flex gap-4">
-            <Icon class="provider-log" name="logos:facebook" size="30" />
+            <Icon
+              @click="signInByProvider('discord')"
+              class="provider-log"
+              name="logos:microsoft-icon"
+              size="30"
+            />
+            <Icon
+              @click="signInByProvider('discord')"
+              class="provider-log"
+              name="devicon:google"
+              size="30"
+            />
+            <Icon
+              @click="signInByProvider('discord')"
+              class="provider-log"
+              name="logos:facebook"
+              size="30"
+            />
             <Icon
               @click="signInByProvider('discord')"
               class="provider-log"
               name="skill-icons:discord"
               size="30"
             />
-            <Icon class="provider-log" name="devicon:google" size="30" />
           </div>
           <div class="flex items-center justify-center gap-4">
             <hr class="w-20" />
@@ -110,13 +152,21 @@
             <Password
               placeholder="Password"
               v-model="password"
-              input-type="password"
+              :feedback="false"
+              toggleMask
+              :invalid="errPassword !== ''"
             />
-            <a href="#" class="hover:underline italic text-xs my-2"
+            <span v-if="errPassword" class="text-[12px] text-red-500">{{
+              errPassword
+            }}</span>
+            <a
+              href="#"
+              class="hover:underline italic text-xs my-2"
+              @click="showError(ERRORS.IN_DEVELOPMENT)"
               >Forgot your password?</a
             >
           </div>
-          <Button type="submit" class="w-[100px]">
+          <Button type="submit" class="w-[100px]" :disabled="!isValidSignIn()">
             <span v-if="!opts.loading">Sign In</span>
             <Icon v-else name="eos-icons:three-dots-loading" size="30" />
           </Button>
@@ -163,6 +213,7 @@
 
 <script setup>
 const opts = useOptions();
+const { showSuccess, showError } = useNotify();
 
 const slided = ref(false);
 const mobileToggleVisibility = ref(true);
@@ -171,16 +222,19 @@ const password = ref(null);
 const re_password = ref(null);
 
 const errEmail = ref("");
+const errPassword = ref("");
 const errRePassword = ref("");
+
+const ERRORS = useErrors();
 
 watch(
   () => email.value,
   () => {
     var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
     if (email.value === "") {
-      errEmail.value = "Email cannot be empty.";
+      errEmail.value = ERRORS.EMAIL_EMPTY;
     } else if (!email.value.match(mailformat)) {
-      errEmail.value = "Email is not valid.";
+      errEmail.value = ERRORS.EMAIL_FORMAT;
     } else {
       errEmail.value = "";
     }
@@ -188,12 +242,27 @@ watch(
 );
 
 watch(
+  () => password.value,
+  () => {
+    if (password.value === "") {
+      errPassword.value = ERRORS.PASSWORD_EMPTY;
+    } else if (password.value !== re_password.value) {
+      errRePassword.value = ERRORS.REPASSWORD_NOT_MATCH;
+    } else {
+      errPassword.value = "";
+    }
+  }
+);
+
+watch(
   () => re_password.value,
   () => {
-    if (password.value !== re_password.value) {
-      errRePassword.value = "Passwords are not matched.";
+    if (re_password.value === "") {
+      errRePassword.value = ERRORS.REPASSWORD_EMPTY;
+    } else if (password.value !== re_password.value) {
+      errRePassword.value = ERRORS.REPASSWORD_NOT_MATCH;
     } else {
-      errEmail.value = "";
+      errRePassword.value = "";
     }
   }
 );
@@ -204,116 +273,114 @@ const toggleOverlay = () => {
   } else {
     errEmail.value = "";
   }
-};
-
-const toggleOverlayInMobile = () => {
-  slided.value = !slided.value;
-  mobileToggleVisibility.value = !mobileToggleVisibility.value;
-  if (email.value) {
+  if (password.value) {
   } else {
-    errEmail.value = "";
+    errPassword.value = "";
   }
 };
 
+const toggleOverlayInMobile = () => {
+  mobileToggleVisibility.value = !mobileToggleVisibility.value;
+  toggleOverlay();
+};
+
 const signInByProvider = async (provider) => {
-  // const { error } = await client.auth.signInWithOAuth({
-  //   provider: provider,
-  // });
-  // if (error) {
-  //   return alert("Something went wrong !");
-  // }
+  showError(ERRORS.SERVICES_NOT_AVAILABLE);
+};
+
+const isValidSignIn = () => {
+  return errEmail.value === "" && errPassword.value === "";
+};
+
+const isValidSignUp = () => {
+  return (
+    errEmail.value === "" &&
+    errPassword.value === "" &&
+    errRePassword.value === "" &&
+    password.value === re_password.value
+  );
 };
 
 const signUp = async () => {
-  // if (
-  //   !username.value ||
-  //   !email.value ||
-  //   !password.value ||
-  //   !re_password.value
-  // ) {
-  //   err.value.type = "overall";
-  //   err.value.message = "Fields cannot be empty.";
-  //   return;
-  // }
-  // if (re_password.value !== password.value) {
-  //   err.value.type = "overall";
-  //   err.value.message = "Password is not match.";
-  //   return;
-  // }
-  // if (re_password.value === password.value) {
-  //   opts.loading = true;
-  //   const { data, error } = await client.auth.signUp({
-  //     email: email.value,
-  //     password: password.value,
-  //   });
-  //   err.value.message = "";
-  //   if (error) {
-  //     opts.loading = false;
-  //     err.value = {
-  //       type: "overall",
-  //       message: error.message,
-  //     };
-  //   } else {
-  //     //add user info
-  //     var result = await useFetch("/api/prisma/users/create", {
-  //       method: "POST",
-  //       body: {
-  //         userId: data.user.id,
-  //         name: username.value,
-  //         email: email.value,
-  //       },
-  //     });
-  //     opts.loading = false;
-  //     if (result.data.value == true) {
-  //       err.value = {
-  //         type: "success",
-  //         message: "Sign up successfully, verify your email.",
-  //       };
-  //     } else {
-  //       err.value = {
-  //         type: "overall",
-  //         message: "Email was registered.",
-  //       };
-  //     }
-  //   }
-  // }
+  if (!email.value) {
+    errEmail.value = ERRORS.EMAIL_EMPTY;
+    return;
+  }
+  if (!password.value) {
+    errPassword.value = ERRORS.PASSWORD_EMPTY;
+    return;
+  }
+  if (!re_password.value) {
+    errPassword.value = ERRORS.REPASSWORD_EMPTY;
+    return;
+  }
+  if (re_password.value !== password.value) {
+    errRePassword.value = ERRORS.REPASSWORD_NOT_MATCH;
+    return;
+  }
+
+  opts.loading = true;
+  try {
+    const { data } = await useFetch("/api/auth/signUp", {
+      method: "POST",
+      body: {
+        email: email.value,
+        password: password.value,
+      },
+    });
+
+    if (data.value?.success) {
+      showSuccess("Sign up successfully.");
+      await navigateTo("/");
+    } else {
+      showError("User already exists.");
+    }
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    opts.loading = false;
+  }
 };
 
 const signIn = async () => {
-  opts.value.loading = true;
-  console.log("signIn", opts.value.loading);
-  await new Promise((r) => setTimeout(r, 10000));
-  opts.value.loading = false;
-  console.log("signIn", opts.value.loading);
+  if (!email.value) {
+    errEmail.value = ERRORS.EMAIL_EMPTY;
+    return;
+  }
+  if (!password.value) {
+    errPassword.value = ERRORS.PASSWORD_EMPTY;
+    return;
+  }
 
-  // if (!email.value || !password.value) {
-  //   err.value.message = "Fields cannot be empty.";
-  //   return;
-  // }
-
-  // opts.loading = true;
-  // const { data, error } = await client.auth.signInWithPassword({
-  //   email: email.value,
-  //   password: password.value,
-  // });
-  // opts.loading = false;
-
-  // if (error) {
-  //   err.value.type = "overall";
-  //   err.value.message = error.message;
-  // } else {
-  //   if (opts.currentPage == "profile") {
-  //     navigateTo(`/user/${opts.currentPage}`);
-  //   } else if (opts.currentPage == "home") {
-  //     navigateTo(`/`);
-  //   } else {
-  //     navigateTo(`/${opts.currentPage}`);
-  //   }
-  // }
+  opts.loading = true;
+  try {
+    const { data } = await useFetch("/api/auth/signIn", {
+      method: "POST",
+      body: {
+        email: email.value,
+        password: password.value,
+      },
+    });
+    if (data.value?.success) {
+      showSuccess("Sign in successfully.");
+      await navigateTo("/");
+    } else {
+      showError("Sign in failed.");
+      console.log("User not found.");
+    }
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    opts.loading = false;
+  }
 };
 </script>
 
 <style scoped>
+.provider-log {
+  transition: all 0.2s ease-in-out;
+}
+
 .provider-log:hover {
   scale: 0.9;
   cursor: pointer;
