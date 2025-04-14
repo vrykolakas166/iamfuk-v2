@@ -13,8 +13,35 @@ export default defineEventHandler(async (event) => {
   }
 
   const token = getCookie(event, "auth_token");
-  const user = JSON.parse(getCookie(event, "auth_user") ?? "{}");
+  const userCookie = getCookie(event, "auth_user");
 
-  const dataFromDecodedToken = await getAuth().verifyIdToken(token ?? "");
-  return { user: user, isAuthenticated: dataFromDecodedToken.uid === user.uid };
+  if (!token || !userCookie) {
+    return { isAuthenticated: false, error: "Missing authentication cookies" };
+  }
+
+  // Verify token first
+  const decodedToken = await getAuth().verifyIdToken(token);
+  const user = JSON.parse(userCookie);
+
+  if (decodedToken.uid !== user.uid) {
+    return { isAuthenticated: false, error: "User ID mismatch" };
+  }
+
+  // Only revoke tokens if verification succeeds
+  try {
+    await getAuth().revokeRefreshTokens(user.uid);
+    const userRecord = await getAuth().getUser(user.uid);
+    const timestamp =
+      new Date(userRecord.tokensValidAfterTime ?? new Date()).getTime() / 1000;
+    console.log(`Tokens revoked at: ${timestamp}`);
+  } catch (revokeError) {
+    console.error("Error revoking tokens:", revokeError);
+    // You might choose to continue even if revoke fails
+  }
+
+  return {
+    user: user,
+    isAuthenticated: true,
+    tokenData: decodedToken,
+  };
 });

@@ -354,7 +354,7 @@ const signIn = async () => {
 
   opts.loading = true;
   try {
-    const { data } = await useFetch("/api/auth/signIn", {
+    const { data } = await $fetch("/api/auth/signIn", {
       method: "POST",
       body: {
         email: email.value,
